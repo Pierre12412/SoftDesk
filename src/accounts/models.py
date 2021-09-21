@@ -35,6 +35,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     is_admin = models.BooleanField(default=False)
 
+
     USERNAME_FIELD = 'email'
     objects = MyUserManager()
 
@@ -43,3 +44,6 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     def has_module_perm(self, app_label):
         return True
+
+    class Meta:
+        verbose_name = 'Compte'
