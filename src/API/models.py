@@ -9,6 +9,7 @@ class Issues(models.Model):
     tag = models.CharField(max_length=100)
     priority = models.CharField(max_length=10)
     status = models.CharField(max_length=10)
+    project_id = models.IntegerField()
     author_user = models.ForeignKey(CustomUser, on_delete=models.CASCADE,related_name="issue_author")
     assignee_user = models.ForeignKey(CustomUser,on_delete=models.CASCADE,related_name="assignee_user")
     created_time = models.DateTimeField()

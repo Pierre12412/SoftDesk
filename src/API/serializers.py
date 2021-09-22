@@ -2,7 +2,7 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
-from API.models import Projects
+from API.models import Projects, Contributors, Issues
 from accounts.models import CustomUser
 
 
@@ -10,6 +10,18 @@ class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Projects
         fields = ('title','description','type','author_user','id')
+
+class ContribSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Contributors
+        fields = ('user_id','project_id','permission','role')
+
+
+class IssueSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Issues
+        fields = ('title','desc','tag','priority','status','created_time','assignee_user_id','author_user_id')
+
 
 
 class RegisterSerializer(serializers.ModelSerializer):
