@@ -6,11 +6,10 @@ from API.models import Projects
 from accounts.models import CustomUser
 
 
-class ProjectSerializer(serializers.HyperlinkedModelSerializer):
+class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Projects
         fields = ('title','description','type','project_id','author_user_id')
-        read_only_fields = ('author_user_id',)
 
 
 class RegisterSerializer(serializers.ModelSerializer):
