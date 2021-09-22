@@ -9,7 +9,7 @@ from accounts.models import CustomUser
 class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Projects
-        fields = ('title','description','type','project_id','author_user_id')
+        fields = ('title','description','type','author_user','id')
 
 
 class RegisterSerializer(serializers.ModelSerializer):
