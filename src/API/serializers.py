@@ -39,7 +39,7 @@ class IssueSerializer(serializers.ModelSerializer):
 class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comments
-        fields = ('description','author_user','issue_id')
+        fields = ('description','issue_id','id')
 
     def create(self, validated_data):
         user = self.context.get("request").user

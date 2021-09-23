@@ -30,4 +30,5 @@ urlpatterns = [
     path('api/projects/<int:project_id>/issues/', get_issues),
     path('api/projects/<int:project_id>/issues/<int:issue_id>', update_issue),
     path('api/projects/<int:project_id>/issues/<int:issue_id>/comments/', get_post_comments),
+    path('api/projects/<int:project_id>/issues/<int:issue_id>/comments/<int:comment_id>', put_delete_comments),
 ]
