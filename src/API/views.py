@@ -8,7 +8,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from API.models import *
-from API.serializers import RegisterSerializer, ContribSerializer, IssueSerializer, CommentSerializer
+from API.serializers import RegisterSerializer, ContribSerializer, IssueSerializer, CommentSerializer, ProjectSerializer
 from accounts.models import CustomUser
 
 
@@ -16,6 +16,26 @@ class RegisterView(generics.CreateAPIView):
     queryset = CustomUser.objects.all()
     permission_classes = (AllowAny,)
     serializer_class = RegisterSerializer
+
+@csrf_exempt
+@api_view(["POST","GET","PUT","DELETE"])
+def project_get_post(request,project_id=None):
+    project = Projects.objects.filter(id=project_id)
+    if request.method == 'GET':
+        if project_id != None:
+            if project:
+                contributors = Contributors.objects.filter(project_id=project_id)
+                for contributor in contributors:
+                    if contributor.user_id == request.user.id or project.author_user_id == request.user.id:
+                        serializer = ProjectSerializer(project,many=True)
+                        return Response(serializer.data)
+                return JsonResponse({"erreur":"Vous n'avez pas l'authorisation d'accès"},status=401)
+            else:
+                return JsonResponse({"erreur":"Projet Inexistant"})
+        else:
+            projects = Projects.objects.all()
+            serializer = ProjectSerializer(projects,many=True)
+            return Response(serializer.data)
 
 
 @csrf_exempt

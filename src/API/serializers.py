@@ -14,7 +14,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Projects
         fields = ('title','description','type','author_user','id')
-        owner = serializers.ReadOnlyField(source='author_user')
+
 
 class ContribSerializer(serializers.ModelSerializer):
     class Meta:

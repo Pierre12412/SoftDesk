@@ -18,13 +18,13 @@ from django.urls import path, include
 from rest_framework.authtoken import views
 from API.views import *
 from API.views import RegisterView
-from .router import router
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/',include(router.urls)),
     path('login/',views.obtain_auth_token,name='api-token-auth'),
     path('signup/', RegisterView.as_view(), name='auth_register'),
+    path('api/projects/', project_get_post),
+    path('api/projects/<int:project_id>', project_get_post),
     path('api/projects/<int:project_id>/users/', contributor_add),
     path('api/projects/<int:project_id>/users/<int:user_id>', contributor_add),
     path('api/projects/<int:project_id>/issues/', get_issues),
