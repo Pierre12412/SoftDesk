@@ -1,4 +1,4 @@
-from API.models import Projects
+from API.models import Projects, Contributors
 
 from .serializers import ProjectSerializer
 from rest_framework import viewsets
@@ -15,4 +15,12 @@ class ProjectViewSet(viewsets.ModelViewSet):
             query = Projects.objects.filter(author_user_id=user.id, id=id)
         else:
             query = Projects.objects.filter(author_user_id=user.id)
+        contributor = Contributors.objects.filter(user_id=user.id)
+        projects = []
+        for project in contributor:
+            projects.append(Projects.objects.filter(id=project.project_id))
+
+        for project in projects:
+            query = query | project
+
         return query

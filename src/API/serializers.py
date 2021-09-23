@@ -14,6 +14,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Projects
         fields = ('title','description','type','author_user','id')
+        owner = serializers.ReadOnlyField(source='author_user')
 
 class ContribSerializer(serializers.ModelSerializer):
     class Meta:
@@ -61,7 +62,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ('email', 'password', 'password2', 'first_name', 'last_name')
+        fields = ('email', 'password', 'password2')
         extra_kwargs = {
             'first_name': {'required': False},
             'last_name': {'required': False}
@@ -76,9 +77,14 @@ class RegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user = CustomUser.objects.create(
             email=validated_data['email'],
-            first_name=validated_data['first_name'],
-            last_name=validated_data['last_name']
         )
+        try:
+            if validated_data['first_name']:
+                user.first_name = validated_data['first_name']
+            if validated_data['last_name']:
+                user.first_name = validated_data['last_name']
+        except:
+            pass
 
         user.set_password(validated_data['password'])
         user.save()
