@@ -28,4 +28,5 @@ urlpatterns = [
     path('api/projects/<int:project_id>/users/', contributor_add),
     path('api/projects/<int:project_id>/users/<int:user_id>', contributor_add),
     path('api/projects/<int:project_id>/issues/', get_issues),
+    path('api/projects/<int:project_id>/issues/<int:issue_id>', update_issue),
 ]

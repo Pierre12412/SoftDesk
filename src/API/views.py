@@ -59,15 +59,42 @@ def get_issues(request,project_id):
     if request.method == 'GET':
         issues = Issues.objects.filter(project_id=project_id)
         if issues:
-            serializer = IssueSerializer(issues,many=True)
+            serializer = IssueSerializer(issues,many=True,context={'request': request,'project_id':project_id})
             return Response(serializer.data)
         else:
             return JsonResponse({"erreur":"Aucun Problème"})
 
     elif request.method == 'POST':
-        data = request.data
-        serializer = IssueSerializer(data=data)
-        if serializer.is_valid():
-            serializer.save()
-            return JsonResponse(serializer.data, status=204)
-        return JsonResponse(serializer.errors, status=400)
+        project = Projects.objects.filter(id=project_id)
+        if project:
+            data = request.data
+            serializer = IssueSerializer(data=data,context={'request': request,'project_id':project_id})
+            if serializer.is_valid():
+                serializer.save()
+                return JsonResponse(serializer.data, status=204)
+            return JsonResponse(serializer.errors, status=400)
+        else:
+            return JsonResponse({"erreur": "Aucun projet existant avec cet ID"})
+
+@csrf_exempt
+@api_view(["DELETE","PUT"])
+def update_issue(request,project_id,issue_id):
+    if request.method == 'DELETE':
+        issue = Issues.objects.filter(project_id=project_id,id=issue_id)
+        if issue:
+            issue.delete()
+        else:
+            return JsonResponse({"erreur":"Aucun Problème à supprimer"})
+        return HttpResponse(status=204)
+
+    elif request.method == 'PUT':
+        issue = Issues.objects.filter(project_id=project_id, id=issue_id)
+        if issue:
+            data = request.data
+            serializer = IssueSerializer(data=data)
+            if serializer.is_valid():
+                serializer.save()
+                return JsonResponse(serializer.data)
+            return JsonResponse(serializer.errors, status=400)
+        else:
+            return JsonResponse({"erreur": "Aucun Problème correspondant"})

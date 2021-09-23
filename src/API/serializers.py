@@ -1,5 +1,9 @@
+from datetime import datetime
+
 from django.contrib.auth.password_validation import validate_password
+
 from rest_framework import serializers
+from rest_framework.fields import CurrentUserDefault
 from rest_framework.validators import UniqueValidator
 
 from API.models import Projects, Contributors, Issues
@@ -20,7 +24,17 @@ class ContribSerializer(serializers.ModelSerializer):
 class IssueSerializer(serializers.ModelSerializer):
     class Meta:
         model = Issues
-        fields = ('title','desc','tag','priority','status','created_time','assignee_user_id','author_user_id')
+        fields = ('id','title','desc','tag','priority','status','assignee_user')
+
+    def create(self, validated_data):
+        user = self.context.get("request").user
+        project = self.context.get("project_id")
+        issue = Issues(**validated_data)
+        issue.created_time = datetime.now()
+        issue.author_user = user
+        issue.project_id = project
+        issue.save()
+        return issue
 
 
 
