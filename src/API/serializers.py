@@ -6,7 +6,7 @@ from rest_framework import serializers
 from rest_framework.fields import CurrentUserDefault
 from rest_framework.validators import UniqueValidator
 
-from API.models import Projects, Contributors, Issues
+from API.models import Projects, Contributors, Issues, Comments
 from accounts.models import CustomUser
 
 
@@ -36,7 +36,19 @@ class IssueSerializer(serializers.ModelSerializer):
         issue.save()
         return issue
 
+class CommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comments
+        fields = ('description','author_user','issue_id')
 
+    def create(self, validated_data):
+        user = self.context.get("request").user
+        issue = self.context.get("issue_id")
+        comment = Comments(**validated_data)
+        comment.issue_id = issue
+        comment.author_user = user
+        comment.save()
+        return comment
 
 class RegisterSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(
