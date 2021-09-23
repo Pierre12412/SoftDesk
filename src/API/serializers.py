@@ -13,7 +13,14 @@ from accounts.models import CustomUser
 class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Projects
-        fields = ('title','description','type','author_user','id')
+        fields = ('title','description','type','id')
+
+    def create(self, validated_data):
+        user = self.context.get("request").user
+        project = Projects(**validated_data)
+        project.author_user = user
+        project.save()
+        return project
 
 
 class ContribSerializer(serializers.ModelSerializer):

@@ -20,15 +20,20 @@ class RegisterView(generics.CreateAPIView):
 @csrf_exempt
 @api_view(["POST","GET","PUT","DELETE"])
 def project_get_post(request,project_id=None):
-    project = Projects.objects.filter(id=project_id)
+    project = Projects.objects.filter(id=project_id).first()
     if request.method == 'GET':
         if project_id != None:
             if project:
                 contributors = Contributors.objects.filter(project_id=project_id)
+                contrib_or_user = False
                 for contributor in contributors:
-                    if contributor.user_id == request.user.id or project.author_user_id == request.user.id:
-                        serializer = ProjectSerializer(project,many=True)
-                        return Response(serializer.data)
+                    if contributor.user_id == request.user.id:
+                        contrib_or_user = True
+                if request.user == project.author_user:
+                    contrib_or_user = True
+                if contrib_or_user:
+                    serializer = ProjectSerializer(project)
+                    return Response(serializer.data)
                 return JsonResponse({"erreur":"Vous n'avez pas l'authorisation d'accès"},status=401)
             else:
                 return JsonResponse({"erreur":"Projet Inexistant"})
@@ -36,6 +41,13 @@ def project_get_post(request,project_id=None):
             projects = Projects.objects.all()
             serializer = ProjectSerializer(projects,many=True)
             return Response(serializer.data)
+    elif request.method == 'POST':
+        data = request.data
+        serializer = ProjectSerializer(data=data,context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(serializer.data, status=204)
+        return JsonResponse(serializer.errors, status=400)
 
 
 @csrf_exempt
