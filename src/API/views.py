@@ -21,38 +21,51 @@ class RegisterView(generics.CreateAPIView):
 @api_view(["POST","GET","PUT","DELETE"])
 def project_get_post(request,project_id=None):
     project = Projects.objects.filter(id=project_id).first()
-    if request.method == 'GET':
-        if project_id != None:
-            if project:
-                contributors = Contributors.objects.filter(project_id=project_id)
-                contrib_or_user = False
-                for contributor in contributors:
-                    if contributor.user_id == request.user.id:
-                        contrib_or_user = True
-                if request.user == project.author_user:
-                    contrib_or_user = True
-                if contrib_or_user:
+    if project:
+        if not has_project_permission(request,project_id):
+            return JsonResponse({"erreur": "Vous n'avez pas l'autorisation d'accès"}, status=401)
+        if request.method == 'GET':
+            if project_id != None:
+                if project:
                     serializer = ProjectSerializer(project)
                     return Response(serializer.data)
-                return JsonResponse({"erreur":"Vous n'avez pas l'authorisation d'accès"},status=401)
             else:
-                return JsonResponse({"erreur":"Projet Inexistant"})
-        else:
-            projects = Projects.objects.all()
-            serializer = ProjectSerializer(projects,many=True)
-            return Response(serializer.data)
-    elif request.method == 'POST':
-        data = request.data
-        serializer = ProjectSerializer(data=data,context={'request': request})
-        if serializer.is_valid():
-            serializer.save()
-            return JsonResponse(serializer.data, status=204)
-        return JsonResponse(serializer.errors, status=400)
+                projects = Projects.objects.all()
+                serializer = ProjectSerializer(projects,many=True)
+                return Response(serializer.data)
 
+        elif request.method == 'POST':
+            data = request.data
+            serializer = ProjectSerializer(data=data,context={'request': request})
+            if serializer.is_valid():
+                serializer.save()
+                return JsonResponse(serializer.data, status=204)
+            return JsonResponse(serializer.errors, status=400)
+    else:
+        return JsonResponse({"erreur":"Projet Inexistant"})
+
+
+def has_project_permission(request,project_id):
+    project = Projects.objects.filter(id=project_id).first()
+    contributors = Contributors.objects.filter(project_id=project_id)
+    contrib_or_user = False
+    for contributor in contributors:
+        if contributor.user_id == request.user.id:
+            contrib_or_user = True
+            break
+    if request.user == project.author_user:
+        contrib_or_user = True
+    if contrib_or_user :
+        return True
+    return False
 
 @csrf_exempt
 @api_view(["POST","GET","PUT","DELETE"])
 def contributor_add(request,project_id,user_id=None):
+
+    if not has_project_permission(request,project_id):
+        return JsonResponse({"erreur": "Vous n'avez pas l'autorisation d'accès"}, status=401)
+
     if request.method == 'GET':
         contributors = Contributors.objects.filter(project_id=project_id)
         if contributors:
@@ -88,6 +101,10 @@ def contributor_add(request,project_id,user_id=None):
 @csrf_exempt
 @api_view(["GET","POST"])
 def get_issues(request,project_id):
+
+    if not has_project_permission(request,project_id):
+        return JsonResponse({"erreur": "Vous n'avez pas l'autorisation d'accès"}, status=401)
+
     if request.method == 'GET':
         issues = Issues.objects.filter(project_id=project_id)
         if issues:
@@ -109,8 +126,25 @@ def get_issues(request,project_id):
             return JsonResponse({"erreur": "Aucun projet existant avec cet ID"})
 
 @csrf_exempt
-@api_view(["DELETE","PUT"])
+@api_view(["DELETE","PUT","GET"])
 def update_issue(request,project_id,issue_id):
+
+    if not has_project_permission(request,project_id):
+        return JsonResponse({"erreur": "Vous n'avez pas l'autorisation d'accès"}, status=401)
+
+    if request.method == "GET":
+        issue = Issues.objects.filter(id=issue_id).first()
+        if issue:
+            serializer = IssueSerializer(issue)
+            return Response(serializer.data)
+        return JsonResponse({"erreur": "Aucun problème existant avec cet ID"})
+
+
+    issue = Issues.objects.filter(id=issue_id).first()
+    if not issue.author_user_id == request.user.id:
+        return JsonResponse({"erreur": "Vous n'avez pas l'autorisation de suppression ou mise à jour"}, status=401)
+
+
     if request.method == 'DELETE':
         issue = Issues.objects.filter(project_id=project_id,id=issue_id)
         if issue:
@@ -134,6 +168,10 @@ def update_issue(request,project_id,issue_id):
 @csrf_exempt
 @api_view(["GET","POST"])
 def get_post_comments(request,project_id,issue_id):
+
+    if not has_project_permission(request,project_id):
+        return JsonResponse({"erreur": "Vous n'avez pas l'autorisation d'accès"}, status=401)
+
     if existing_issue(project_id,issue_id):
         if request.method == 'GET':
             comments = Comments.objects.filter(issue_id=issue_id)
@@ -160,6 +198,10 @@ def get_post_comments(request,project_id,issue_id):
 @csrf_exempt
 @api_view(["GET","PUT","DELETE"])
 def put_delete_comments(request,project_id,issue_id,comment_id):
+
+    if not has_project_permission(request,project_id):
+        return JsonResponse({"erreur": "Vous n'avez pas l'autorisation d'accès"}, status=401)
+
     if existing_issue(project_id,issue_id):
         if request.method == 'DELETE':
             comment = Comments.objects.filter(id=comment_id)
