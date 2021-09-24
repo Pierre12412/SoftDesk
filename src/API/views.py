@@ -75,30 +75,23 @@ def project_get_post(request,project_id=None):
         return JsonResponse({"erreur": "Requête incorrecte"}, status=403)
 
     if project:
-        if not has_project_permission(request,project_id):
-            return JsonResponse({"erreur": "Vous n'avez pas l'autorisation d'accès"}, status=403)
         if request.method == 'GET':
             if project:
                 serializer = ProjectSerializer(project)
                 return Response(serializer.data)
 
         elif request.method == 'PUT':
-            if is_object_author(request,project):
-                data = request.data
-                serializer = ProjectSerializer(project, data=data, partial=True)
-                if serializer.is_valid():
-                    serializer.save()
-                    return JsonResponse(serializer.data)
-                return JsonResponse(serializer.errors, status=400)
-            else:
-                return JsonResponse({"erreur": "Vous n'avez pas l'autorisation de mise à jour"}, status=403)
+            data = request.data
+            serializer = ProjectSerializer(project, data=data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return JsonResponse(serializer.data)
+            return JsonResponse(serializer.errors, status=400)
 
         elif request.method == 'DELETE':
-            if is_object_author(request,project):
-                project.delete()
-                return JsonResponse({"détails": "Projet {} supprimé".format(project_id)},status=200)
-            else:
-                return JsonResponse({"erreur": "Vous n'avez pas l'autorisation de suppression"}, status=403)
+            project.delete()
+            return JsonResponse({"détails": "Projet {} supprimé".format(project_id)},status=200)
+
     else:
         return JsonResponse({"erreur":"Projet Inexistant"})
 
@@ -106,9 +99,6 @@ def project_get_post(request,project_id=None):
 @csrf_exempt
 @api_view(["POST","GET","PUT","DELETE"])
 def contributor_add(request,project_id,user_id=None):
-
-    if not has_project_permission(request,project_id):
-        return JsonResponse({"erreur": "Vous n'avez pas l'autorisation d'accès"}, status=403)
 
     if request.method == 'GET':
         contributors = Contributors.objects.filter(project_id=project_id)
@@ -146,9 +136,6 @@ def contributor_add(request,project_id,user_id=None):
 @api_view(["GET","POST"])
 def get_issues(request,project_id):
 
-    if not has_project_permission(request,project_id):
-        return JsonResponse({"erreur": "Vous n'avez pas l'autorisation d'accès"}, status=401)
-
     if request.method == 'GET':
         issues = Issues.objects.filter(project_id=project_id)
         if issues:
@@ -173,9 +160,6 @@ def get_issues(request,project_id):
 @api_view(["DELETE","PUT","GET"])
 def update_issue(request,project_id,issue_id):
 
-    if not has_project_permission(request,project_id):
-        return JsonResponse({"erreur": "Vous n'avez pas l'autorisation d'accès"}, status=403)
-
     if request.method == "GET":
         issue = Issues.objects.filter(id=issue_id).first()
         if issue:
@@ -183,45 +167,30 @@ def update_issue(request,project_id,issue_id):
             return Response(serializer.data)
         return JsonResponse({"erreur": "Aucun problème existant avec cet ID"})
 
-
-    issue = Issues.objects.filter(id=issue_id).first()
-    if not issue.author_user_id == request.user.id:
-        return JsonResponse({"erreur": "Vous n'avez pas l'autorisation de suppression ou mise à jour"}, status=403)
-
-
     if request.method == 'DELETE':
         issue = Issues.objects.filter(project_id=project_id,id=issue_id)
-        if is_object_author(request, issue):
-            if issue:
-                issue.delete()
-            else:
-                return JsonResponse({"erreur":"Aucun Problème à supprimer"})
-            return JsonResponse({"détail":"Le projet {} a été supprimé".format(issue_id)})
+        if issue:
+            issue.delete()
         else:
-            return JsonResponse({"erreur": "Vous n'avez pas l'autorisation de suppression"}, status=403)
+            return JsonResponse({"erreur":"Aucun Problème à supprimer"})
+        return JsonResponse({"détail":"Le projet {} a été supprimé".format(issue_id)})
 
     elif request.method == 'PUT':
         issue = Issues.objects.filter(project_id=project_id, id=issue_id).first()
         if issue:
-            if is_object_author(request, issue):
-                data = request.data
-                serializer = IssueSerializer(issue,data=data, partial=True)
-                if serializer.is_valid():
-                    serializer.save()
-                    return JsonResponse(serializer.data)
-                return JsonResponse(serializer.errors, status=400)
-            else:
-                return JsonResponse({"erreur": "Vous n'avez pas l'autorisation de mise à jour"},status=403)
+            data = request.data
+            serializer = IssueSerializer(issue,data=data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return JsonResponse(serializer.data)
+            return JsonResponse(serializer.errors, status=400)
+
         else:
             return JsonResponse({"erreur": "Aucun Problème correspondant"})
 
 @csrf_exempt
 @api_view(["GET","POST"])
 def get_post_comments(request,project_id,issue_id):
-
-    if not has_project_permission(request,project_id):
-        return JsonResponse({"erreur": "Vous n'avez pas l'autorisation d'accès"}, status=403)
-
     if existing_issue(project_id,issue_id):
         if request.method == 'GET':
             comments = Comments.objects.filter(issue_id=issue_id)
@@ -248,12 +217,8 @@ def get_post_comments(request,project_id,issue_id):
 @csrf_exempt
 @api_view(["GET","PUT","DELETE"])
 def put_delete_comments(request,project_id,issue_id,comment_id):
-
-    if not has_project_permission(request,project_id):
-        if existing_project(project_id):
-            return JsonResponse({"erreur": "Vous n'avez pas l'autorisation d'accès"}, status=403)
-        else:
-            return JsonResponse({"erreur": "Projet Inexistant"})
+    if not existing_project(project_id):
+        return JsonResponse({"erreur": "Projet Inexistant"})
 
     if request.method == 'GET':
         comment = Comments.objects.filter(id=comment_id)
@@ -262,9 +227,6 @@ def put_delete_comments(request,project_id,issue_id,comment_id):
             return Response(serializer.data)
         else:
             return JsonResponse({"erreur": "Aucun Commentaire avec cet ID"})
-
-    if not is_object_author(request,Comments.objects.filter(id=comment_id).first()):
-        return JsonResponse({"erreur": "Vous n'avez pas l'autorisation de suppression ou mise à jour"}, status=403)
 
     if existing_issue(project_id,issue_id):
         if request.method == 'DELETE':
