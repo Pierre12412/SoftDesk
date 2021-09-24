@@ -41,7 +41,7 @@ def existing_issue(project_id,issue_id):
     return False
 
 def existing_comment(project_id,issue_id,comment_id):
-    if not existing_project(project_id) or existing_issue(issue_id):
+    if not existing_project(project_id) or existing_issue(project_id,issue_id):
         return False
     comment = Comments.objects.filter(id=comment_id)
     if comment:
@@ -53,8 +53,6 @@ def check_comment(project_id,issue_id,comment_id):
         return JsonResponse({"erreur": "Aucun Projet avec cet ID"})
     if not existing_issue(project_id, issue_id):
         return JsonResponse({"erreur": "Aucun Problème avec cet ID"})
-    if not existing_comment(project_id,issue_id,comment_id):
-        return JsonResponse({"erreur": "Aucun Commentaire avec cet ID"})
     return True
 
 def check_issue(project_id,issue_id):
@@ -88,9 +86,9 @@ def contributor_add(request,project_id,user_id=None):
     if not existing_project(project_id):
         return JsonResponse({"erreur":"Aucun Projet avec cet ID"})
 
-    if request.method != 'GET':
-        if not author_permission(request,Projects.objects.filter(id=project_id)):
-            return JsonResponse({"erreur": "Vous n'avez pas l'autorisation"})
+
+    if not author_permission(request,Projects.objects.filter(id=project_id).first()):
+        return JsonResponse({"erreur": "Vous n'avez pas l'autorisation"})
 
     if request.method == 'GET':
         contributors = Contributors.objects.filter(project_id=project_id)
@@ -98,7 +96,7 @@ def contributor_add(request,project_id,user_id=None):
             serializer = ContribSerializer(contributors,many=True)
             return Response(serializer.data)
         else:
-            return JsonResponse({"erreur":"Aucun Contributeur"})
+            return JsonResponse({"erreur":"Aucun Collaborateur"})
 
     elif request.method == 'PUT':
         data = JSONParser().parse(request)
@@ -113,7 +111,7 @@ def contributor_add(request,project_id,user_id=None):
         if contributor:
             contributor.delete()
         else:
-            return JsonResponse({"erreur":"Aucun Contributeur à supprimer"})
+            return JsonResponse({"erreur":"Aucun Collaborateur à supprimer"})
         return HttpResponse(status=204)
 
     elif request.method == 'POST':
@@ -130,7 +128,7 @@ def contributor_add(request,project_id,user_id=None):
 def get_issues(request,project_id):
 
     if not contributor_author_permission(request,project_id):
-        JsonResponse({"erreur": "Vous n'avez pas l'autorisation"})
+        return JsonResponse({"erreur": "Vous n'avez pas l'autorisation"})
 
     if not existing_project(project_id):
         return JsonResponse({"erreur":"Aucun Projet avec cet ID"})
@@ -163,7 +161,7 @@ def update_issue(request,project_id,issue_id):
 
     issue = Issues.objects.filter(id=issue_id).first()
 
-    if not author_permission(request, issue) and request.method != 'GET':
+    if not contributor_author_permission(request,project_id):
         return JsonResponse({"erreur": "Vous n'avez pas l'autorisation"})
 
     if request.method == "GET":
@@ -171,6 +169,9 @@ def update_issue(request,project_id,issue_id):
             serializer = IssueSerializer(issue)
             return Response(serializer.data)
         return JsonResponse({"erreur": "Aucun problème existant avec cet ID"})
+
+    if not author_permission(request, issue) :
+        return JsonResponse({"erreur": "Vous n'avez pas l'autorisation"})
 
     if request.method == 'DELETE':
         issue = Issues.objects.filter(project_id=project_id,id=issue_id)
@@ -231,15 +232,17 @@ def put_delete_comments(request,project_id,issue_id,comment_id):
     if check is not True:
         return check
 
-    comment = Comments.objects.filter(id=comment_id)
+    comment = Comments.objects.filter(id=comment_id).first()
 
     if request.method != 'GET':
         if not author_permission(request,comment):
             return JsonResponse({"erreur": "Vous n'avez pas l'autorisation"})
 
     if request.method == 'GET':
+        if not contributor_author_permission(request, project_id):
+            return JsonResponse({"erreur": "Vous n'avez pas l'autorisation"})
         if comment:
-            serializer = CommentSerializer(comment, many=True, context={'request': request, 'issue_id': issue_id})
+            serializer = CommentSerializer(comment, context={'request': request, 'issue_id': issue_id})
             return Response(serializer.data)
         else:
             return JsonResponse({"erreur": "Aucun Commentaire avec cet ID"})
