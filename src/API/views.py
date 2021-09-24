@@ -1,11 +1,12 @@
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.parsers import JSONParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from API.models import *
+from API.permissions import IsAuthorOrReadOnly
 from API.serializers import RegisterSerializer, ContribSerializer, IssueSerializer, CommentSerializer, ProjectSerializer
 from accounts.models import CustomUser
 
@@ -14,21 +15,10 @@ class RegisterView(generics.CreateAPIView):
     permission_classes = (AllowAny,)
     serializer_class = RegisterSerializer
 
-def has_project_permission(request,project_id):
-    project = Projects.objects.filter(id=project_id).first()
-    if project is None:
-        return False
-    contributors = Contributors.objects.filter(project_id=project_id)
-    contrib_or_user = False
-    for contributor in contributors:
-        if contributor.user_id == request.user.id:
-            contrib_or_user = True
-            break
-    if request.user == project.author_user:
-        contrib_or_user = True
-    if contrib_or_user :
-        return True
-    return False
+class ProjectsDetail(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Projects.objects.all()
+    serializer_class = ProjectSerializer
+    permission_classes = [IsAuthorOrReadOnly]
 
 
 def is_object_author(request,object):
@@ -55,11 +45,13 @@ def existing_issue(project_id,issue_id):
         return True
     return False
 
+
 @csrf_exempt
 @api_view(["POST","GET","PUT","DELETE"])
+@permission_classes([IsAuthorOrReadOnly,])
 def project_get_post(request,project_id=None):
-    project = Projects.objects.filter(id=project_id).first()
 
+    project = Projects.objects.filter(id=project_id).first()
     if project_id is None and request.method == 'GET':
         projects = Projects.objects.all()
         serializer = ProjectSerializer(projects, many=True)
@@ -76,9 +68,9 @@ def project_get_post(request,project_id=None):
 
     if project:
         if request.method == 'GET':
-            if project:
-                serializer = ProjectSerializer(project)
-                return Response(serializer.data)
+            project.get_object()
+            serializer = ProjectSerializer(project)
+            return Response(serializer.data)
 
         elif request.method == 'PUT':
             data = request.data
