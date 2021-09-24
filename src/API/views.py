@@ -158,6 +158,9 @@ def update_issue(request,project_id,issue_id):
 
     issue = Issues.objects.filter(id=issue_id).first()
 
+    if not author_permission(request, issue):
+        JsonResponse({"erreur": "Vous n'avez pas l'autorisation"})
+
     if request.method == "GET":
         if issue:
             serializer = IssueSerializer(issue)
@@ -216,8 +219,13 @@ def put_delete_comments(request,project_id,issue_id,comment_id):
 
     check_comment(project_id,issue_id,comment_id)
 
+    comment = Comments.objects.filter(id=comment_id)
+
+    if request.method != 'GET':
+        if not author_permission(request,comment):
+            JsonResponse({"erreur": "Vous n'avez pas l'autorisation"})
+
     if request.method == 'GET':
-        comment = Comments.objects.filter(id=comment_id)
         if comment:
             serializer = CommentSerializer(comment, many=True, context={'request': request, 'issue_id': issue_id})
             return Response(serializer.data)
