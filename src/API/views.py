@@ -55,12 +55,14 @@ def check_comment(project_id,issue_id,comment_id):
         return JsonResponse({"erreur": "Aucun Problème avec cet ID"})
     if not existing_comment(project_id,issue_id,comment_id):
         return JsonResponse({"erreur": "Aucun Commentaire avec cet ID"})
+    return True
 
 def check_issue(project_id,issue_id):
     if not existing_project(project_id):
         return JsonResponse({"erreur":"Aucun Projet avec cet ID"})
     if not existing_issue(project_id,issue_id):
         return JsonResponse({"erreur": "Aucun Problème correspondant"})
+    return True
 
 def author_permission(request,obj):
     if request.user.id == obj.author_user_id:
@@ -68,7 +70,7 @@ def author_permission(request,obj):
     return False
 
 def contributor_author_permission(request,project_id):
-    if author_permission(request,Projects.objects.filter(id=project_id)):
+    if author_permission(request,Projects.objects.filter(id=project_id).first()):
         return True
     contributors = Contributors.objects.filter(project_id=project_id)
     for contributor in contributors:
@@ -85,6 +87,7 @@ def contributor_add(request,project_id,user_id=None):
 
     if not existing_project(project_id):
         return JsonResponse({"erreur":"Aucun Projet avec cet ID"})
+
     if request.method != 'GET':
         if not author_permission(request,Projects.objects.filter(id=project_id)):
             return JsonResponse({"erreur": "Vous n'avez pas l'autorisation"})
@@ -154,12 +157,14 @@ def get_issues(request,project_id):
 @permission_classes([IsAuthenticated])
 def update_issue(request,project_id,issue_id):
 
-    check_issue(project_id,issue_id)
+    check = check_issue(project_id, issue_id)
+    if check is not True:
+        return check
 
     issue = Issues.objects.filter(id=issue_id).first()
 
-    if not author_permission(request, issue):
-        JsonResponse({"erreur": "Vous n'avez pas l'autorisation"})
+    if not author_permission(request, issue) and request.method != 'GET':
+        return JsonResponse({"erreur": "Vous n'avez pas l'autorisation"})
 
     if request.method == "GET":
         if issue:
@@ -173,7 +178,7 @@ def update_issue(request,project_id,issue_id):
             issue.delete()
         else:
             return JsonResponse({"erreur":"Aucun Problème à supprimer"})
-        return JsonResponse({"détail":"Le projet {} a été supprimé".format(issue_id)})
+        return JsonResponse({"détail":"Le problème {} a été supprimé".format(issue_id)})
 
     elif request.method == 'PUT':
         data = request.data
@@ -189,7 +194,12 @@ def update_issue(request,project_id,issue_id):
 @permission_classes([IsAuthenticated])
 def get_post_comments(request,project_id,issue_id):
 
-    check_issue(project_id,issue_id)
+    check = check_issue(project_id,issue_id)
+    if check is not True:
+        return check
+
+    if not contributor_author_permission(request,project_id):
+        return JsonResponse({"erreur": "Vous n'avez pas l'autorisation"})
 
     if request.method == 'GET':
         comments = Comments.objects.filter(issue_id=issue_id)
@@ -217,13 +227,15 @@ def get_post_comments(request,project_id,issue_id):
 @permission_classes([IsAuthenticated])
 def put_delete_comments(request,project_id,issue_id,comment_id):
 
-    check_comment(project_id,issue_id,comment_id)
+    check = check_comment(project_id,issue_id,comment_id)
+    if check is not True:
+        return check
 
     comment = Comments.objects.filter(id=comment_id)
 
     if request.method != 'GET':
         if not author_permission(request,comment):
-            JsonResponse({"erreur": "Vous n'avez pas l'autorisation"})
+            return JsonResponse({"erreur": "Vous n'avez pas l'autorisation"})
 
     if request.method == 'GET':
         if comment:
