@@ -44,6 +44,7 @@ class IssueSerializer(serializers.ModelSerializer):
         issue.save()
         return issue
 
+
 class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comments
@@ -57,6 +58,7 @@ class CommentSerializer(serializers.ModelSerializer):
         comment.author_user = user
         comment.save()
         return comment
+
 
 class RegisterSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(
