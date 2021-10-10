@@ -17,4 +17,4 @@ Puis en tapant : python manage.py runserver
 
 Le serveur de l'API étant lancé, vous pouvez maintenant faire vos appels à l'API en local
 
-Lien de la documentation POSTMAN :
+Lien de la documentation POSTMAN : https://documenter.getpostman.com/view/17600400/UV5RkzTR
