@@ -10,15 +10,18 @@ from API.permissions import IsAuthorOrReadOnly
 from API.serializers import RegisterSerializer, ContribSerializer, IssueSerializer, CommentSerializer, ProjectSerializer
 from accounts.models import CustomUser
 
+
 class RegisterView(generics.CreateAPIView):
     queryset = CustomUser.objects.all()
     permission_classes = (AllowAny,)
     serializer_class = RegisterSerializer
 
+
 class ProjectsDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = Projects.objects.all()
     serializer_class = ProjectSerializer
     permission_classes = [IsAuthorOrReadOnly]
+
 
 class ProjectsAll(generics.ListCreateAPIView):
     queryset = Projects.objects.all()
@@ -40,6 +43,7 @@ def existing_issue(project_id,issue_id):
         return True
     return False
 
+
 def existing_comment(project_id,issue_id,comment_id):
     if not existing_project(project_id) or existing_issue(project_id,issue_id):
         return False
@@ -48,12 +52,14 @@ def existing_comment(project_id,issue_id,comment_id):
         return True
     return False
 
+
 def check_comment(project_id,issue_id,comment_id):
     if not existing_project(project_id):
         return JsonResponse({"erreur": "Aucun Projet avec cet ID"})
     if not existing_issue(project_id, issue_id):
         return JsonResponse({"erreur": "Aucun Problème avec cet ID"})
     return True
+
 
 def check_issue(project_id,issue_id):
     if not existing_project(project_id):
@@ -62,10 +68,14 @@ def check_issue(project_id,issue_id):
         return JsonResponse({"erreur": "Aucun Problème correspondant"})
     return True
 
+
 def author_permission(request,obj):
+    if obj is None:
+        return False
     if request.user.id == obj.author_user_id:
         return True
     return False
+
 
 def contributor_author_permission(request,project_id):
     if author_permission(request,Projects.objects.filter(id=project_id).first()):
@@ -85,7 +95,6 @@ def contributor_add(request,project_id,user_id=None):
 
     if not existing_project(project_id):
         return JsonResponse({"erreur":"Aucun Projet avec cet ID"})
-
 
     if not author_permission(request,Projects.objects.filter(id=project_id).first()):
         return JsonResponse({"erreur": "Vous n'avez pas l'autorisation"})
