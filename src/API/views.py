@@ -28,46 +28,13 @@ class ProjectsAll(generics.ListCreateAPIView):
     serializer_class = ProjectSerializer
 
 
-def existing_project(project_id):
-    project = Projects.objects.filter(id=project_id)
-    if project:
-        return True
-    return False
-
-
-def existing_issue(project_id,issue_id):
-    if not existing_project(project_id):
-        return False
-    issue = Issues.objects.filter(id=issue_id,project_id=project_id)
-    if issue:
-        return True
-    return False
-
-
 def existing_comment(project_id,issue_id,comment_id):
-    if not existing_project(project_id) or existing_issue(project_id,issue_id):
-        return False
+    get_object_or_404(Projects, id=project_id)
+    get_object_or_404(Issues, id=issue_id)
     comment = Comments.objects.filter(id=comment_id)
     if comment:
         return True
     return False
-
-
-def check_comment(project_id,issue_id,comment_id):
-    if not existing_project(project_id):
-        return JsonResponse({"erreur": "Aucun Projet avec cet ID"})
-    if not existing_issue(project_id, issue_id):
-        return JsonResponse({"erreur": "Aucun Problème avec cet ID"})
-    return True
-
-
-def check_issue(project_id,issue_id):
-    if not existing_project(project_id):
-        return JsonResponse({"erreur":"Aucun Projet avec cet ID"})
-    if not existing_issue(project_id,issue_id):
-        return JsonResponse({"erreur": "Aucun Problème correspondant"})
-    return True
-
 
 def author_permission(request,obj):
     if obj is None:
@@ -93,8 +60,7 @@ def contributor_author_permission(request,project_id):
 @permission_classes([IsAuthenticated])
 def contributor_add(request,project_id,user_id=None):
 
-    if not existing_project(project_id):
-        return JsonResponse({"erreur":"Aucun Projet avec cet ID"})
+    get_object_or_404(Projects, id=project_id)
 
     if not author_permission(request,Projects.objects.filter(id=project_id).first()):
         return JsonResponse({"erreur": "Vous n'avez pas l'autorisation"})
@@ -131,6 +97,7 @@ def contributor_add(request,project_id,user_id=None):
             return JsonResponse(serializer.data, status=204)
         return JsonResponse(serializer.errors, status=400)
 
+
 @csrf_exempt
 @api_view(["GET","POST"])
 @permission_classes([IsAuthenticated])
@@ -139,8 +106,7 @@ def get_issues(request,project_id):
     if not contributor_author_permission(request,project_id):
         return JsonResponse({"erreur": "Vous n'avez pas l'autorisation"})
 
-    if not existing_project(project_id):
-        return JsonResponse({"erreur":"Aucun Projet avec cet ID"})
+    get_object_or_404(Projects, id=project_id)
 
     if request.method == 'GET':
         issues = Issues.objects.filter(project_id=project_id)
@@ -164,11 +130,7 @@ def get_issues(request,project_id):
 @permission_classes([IsAuthenticated])
 def update_issue(request,project_id,issue_id):
 
-    check = check_issue(project_id, issue_id)
-    if check is not True:
-        return check
-
-    issue = Issues.objects.filter(id=issue_id).first()
+    issue = get_object_or_404(Issues, id=issue_id)
 
     if not contributor_author_permission(request,project_id):
         return JsonResponse({"erreur": "Vous n'avez pas l'autorisation"})
@@ -204,9 +166,7 @@ def update_issue(request,project_id,issue_id):
 @permission_classes([IsAuthenticated])
 def get_post_comments(request,project_id,issue_id):
 
-    check = check_issue(project_id,issue_id)
-    if check is not True:
-        return check
+    get_object_or_404(Issues, id=issue_id)
 
     if not contributor_author_permission(request,project_id):
         return JsonResponse({"erreur": "Vous n'avez pas l'autorisation"})
@@ -237,11 +197,7 @@ def get_post_comments(request,project_id,issue_id):
 @permission_classes([IsAuthenticated])
 def put_delete_comments(request,project_id,issue_id,comment_id):
 
-    check = check_comment(project_id,issue_id,comment_id)
-    if check is not True:
-        return check
-
-    comment = Comments.objects.filter(id=comment_id).first()
+    comment = get_object_or_404(Comments, id=comment_id)
 
     if request.method != 'GET':
         if not author_permission(request,comment):
@@ -256,25 +212,24 @@ def put_delete_comments(request,project_id,issue_id,comment_id):
         else:
             return JsonResponse({"erreur": "Aucun Commentaire avec cet ID"})
 
-    if existing_issue(project_id,issue_id):
-        if request.method == 'DELETE':
-            comment = Comments.objects.filter(id=comment_id)
-            if comment:
-                comment.delete()
-            else:
-                return JsonResponse({"erreur": "Aucun Commentaire à supprimer"})
-            return JsonResponse({"détail": "Le commentaire {} a été supprimé".format(comment_id)})
+    get_object_or_404(Issues, id=issue_id)
+    if request.method == 'DELETE':
+        comment = Comments.objects.filter(id=comment_id)
+        if comment:
+            comment.delete()
+        else:
+            return JsonResponse({"erreur": "Aucun Commentaire à supprimer"})
+        return JsonResponse({"détail": "Le commentaire {} a été supprimé".format(comment_id)})
 
-        elif request.method == 'PUT':
-            comment = Comments.objects.filter(id=comment_id).first()
-            if comment:
-                data = request.data
-                serializer = CommentSerializer(comment, data=data, partial=True)
-                if serializer.is_valid():
-                    serializer.save()
-                    return JsonResponse(serializer.data)
-                return JsonResponse(serializer.errors, status=400)
-            else:
-                return JsonResponse({"erreur": "Aucun Commentaire correspondant"})
-    else:
-        return JsonResponse({"erreur": 'Projet ou problème inexistant'})
+    elif request.method == 'PUT':
+        comment = Comments.objects.filter(id=comment_id).first()
+        if comment:
+            data = request.data
+            serializer = CommentSerializer(comment, data=data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return JsonResponse(serializer.data)
+            return JsonResponse(serializer.errors, status=400)
+        else:
+            return JsonResponse({"erreur": "Aucun Commentaire correspondant"})
+
