@@ -23,6 +23,7 @@ class MyUserManager(BaseUserManager):
         user.save()
         return user
 
+
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(
         unique=True,
@@ -38,11 +39,6 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     USERNAME_FIELD = 'email'
     objects = MyUserManager()
 
-    def has_perm(self, perm, obj=None):
-        return True
-
-    def has_module_perm(self, app_label):
-        return True
 
     class Meta:
         verbose_name = 'Compte'
