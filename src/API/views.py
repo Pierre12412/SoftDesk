@@ -1,14 +1,16 @@
 from django.http import HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.parsers import JSONParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from API.models import *
+from API.models import Projects, Contributors, Comments, Issues
 from API.permissions import IsAuthorOrReadOnly
 from API.serializers import RegisterSerializer, ContribSerializer, IssueSerializer, CommentSerializer, ProjectSerializer
 from accounts.models import CustomUser
+from API.permissions import author_permission, contributor_author_permission
 
 
 class RegisterView(generics.CreateAPIView):
@@ -36,29 +38,10 @@ def existing_comment(project_id,issue_id,comment_id):
         return True
     return False
 
-def author_permission(request,obj):
-    if obj is None:
-        return False
-    if request.user.id == obj.author_user_id:
-        return True
-    return False
 
-
-def contributor_author_permission(request,project_id):
-    if author_permission(request,Projects.objects.filter(id=project_id).first()):
-        return True
-    contributors = Contributors.objects.filter(project_id=project_id)
-    for contributor in contributors:
-        if contributor.user_id == request.user.id:
-            return True
-    return False
-
-
-
-@csrf_exempt
 @api_view(["POST","GET","PUT","DELETE"])
 @permission_classes([IsAuthenticated])
-def contributor_add(request,project_id,user_id=None):
+def contributor_all(request,project_id,user_id=None):
 
     get_object_or_404(Projects, id=project_id)
 
@@ -98,10 +81,9 @@ def contributor_add(request,project_id,user_id=None):
         return JsonResponse(serializer.errors, status=400)
 
 
-@csrf_exempt
 @api_view(["GET","POST"])
 @permission_classes([IsAuthenticated])
-def get_issues(request,project_id):
+def get_post_issues(request,project_id):
 
     if not contributor_author_permission(request,project_id):
         return JsonResponse({"erreur": "Vous n'avez pas l'autorisation"})
@@ -125,10 +107,9 @@ def get_issues(request,project_id):
         return JsonResponse(serializer.errors, status=400)
 
 
-@csrf_exempt
 @api_view(["DELETE","PUT","GET"])
 @permission_classes([IsAuthenticated])
-def update_issue(request,project_id,issue_id):
+def update_delete_get_issue(request,project_id,issue_id):
 
     issue = get_object_or_404(Issues, id=issue_id)
 
@@ -161,7 +142,6 @@ def update_issue(request,project_id,issue_id):
         return JsonResponse(serializer.errors, status=400)
 
 
-@csrf_exempt
 @api_view(["GET","POST"])
 @permission_classes([IsAuthenticated])
 def get_post_comments(request,project_id,issue_id):
@@ -192,10 +172,9 @@ def get_post_comments(request,project_id,issue_id):
             return JsonResponse({"erreur": "Aucun problème existant avec cet ID"})
 
 
-@csrf_exempt
 @api_view(["GET","PUT","DELETE"])
 @permission_classes([IsAuthenticated])
-def put_delete_comments(request,project_id,issue_id,comment_id):
+def put_get_delete_comments(request,project_id,issue_id,comment_id):
 
     comment = get_object_or_404(Comments, id=comment_id)
 
